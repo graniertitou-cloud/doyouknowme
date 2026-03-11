@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Do you really know Titou?</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0d0d0d;
+    --surface: #161616;
+    --surface2: #1e1e1e;
+    --border: #2a2a2a;
+    --accent: #ff4d00;
+    --accent2: #ff8c00;
+    --text: #f0f0f0;
+    --text-soft: #888;
+    --correct: #00c864;
+    --wrong: #ff1a1a;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Background grain */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.5;
+  }
+
+  /* Red flash overlay */
+  #flash-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--wrong);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 999;
+    transition: opacity 0.1s;
+  }
+
+  #flash-overlay.flash {
+    animation: flashRed 0.5s ease forwards;
+  }
+
+  @keyframes flashRed {
+    0%   { opacity: 0.45; }
+    100% { opacity: 0; }
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 680px;
+    padding: 24px 20px;
+  }
+
+  /* ===== INTRO ===== */
+  #screen-intro {
+    text-align: center;
+    animation: fadeUp 0.7s ease both;
+  }
+
+  .intro-emoji {
+    font-size: 4rem;
+    display: block;
+    margin-bottom: 20px;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.12); }
+  }
+
+  .intro-eyebrow {
+    font-size: 0.75rem;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+
+  .intro-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(3.5rem, 12vw, 7rem);
+    line-height: 0.9;
+    letter-spacing: 2px;
+    margin-bottom: 20px;
+    background: linear-gradient(135deg, #f0f0f0 0%, #888 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .intro-title span {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .intro-sub {
+    color: var(--text-soft);
+    font-size: 1rem;
+    font-weight: 300;
+    margin-bottom: 40px;
+    line-height: 1.6;
+  }
+
+  .intro-sub strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .btn-start {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 18px 56px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    letter-spacing: 2px;
+    cursor: pointer;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    transition: transform 0.15s, background 0.15s;
+  }
+
+  .btn-start:hover {
+    background: var(--accent2);
+    transform: scale(1.04);
+  }
+
+  /* ===== QUESTION SCREEN ===== */
+  #screen-question {
+    display: none;
+  }
+
+  .top-bar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 32px;
+  }
+
+  .progress-wrap {
+    flex: 1;
+    height: 3px;
+    background: var(--border);
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width 0.4s cubic-bezier(.4,0,.2,1);
+  }
+
+  .q-counter {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    color: var(--accent);
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+
+  .score-pill {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-soft);
+    font-size: 0.8rem;
+    padding: 6px 14px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .q-emoji {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 14px;
+    animation: wiggle 0.5s ease;
+  }
+
+  @keyframes wiggle {
+    0%   { transform: rotate(0deg) scale(0.8); }
+    30%  { transform: rotate(-8deg) scale(1.1); }
+    60%  { transform: rotate(6deg) scale(1.05); }
+    100% { transform: rotate(0deg) scale(1); }
+  }
+
+  .q-text {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(1.8rem, 5vw, 2.8rem);
+    line-height: 1.1;
+    letter-spacing: 1px;
+    margin-bottom: 28px;
+    color: var(--text);
+  }
+
+  .choices {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .choice {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 16px 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 0.95rem;
+    font-family: 'DM Sans', sans-serif;
+    text-align: left;
+    transition: border-color 0.15s, background 0.15s, transform 0.1s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .choice::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--accent);
+    transform: scaleY(0);
+    transition: transform 0.15s;
+  }
+
+  .choice:hover:not(.disabled) {
+    border-color: var(--accent);
+    background: var(--surface2);
+    transform: translateX(4px);
+  }
+
+  .choice:hover:not(.disabled)::before {
+    transform: scaleY(1);
+  }
+
+  .choice-letter {
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--border);
+    color: var(--accent);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.15s, border-color 0.15s;
+  }
+
+  .choice.correct {
+    border-color: var(--correct);
+    background: rgba(0, 200, 100, 0.08);
+    pointer-events: none;
+  }
+
+  .choice.correct .choice-letter {
+    background: var(--correct);
+    border-color: var(--correct);
+    color: #000;
+  }
+
+  .choice.correct::before { background: var(--correct); transform: scaleY(1); }
+
+  .choice.wrong {
+    border-color: var(--wrong);
+    background: rgba(255, 26, 26, 0.08);
+    pointer-events: none;
+  }
+
+  .choice.wrong .choice-letter {
+    background: var(--wrong);
+    border-color: var(--wrong);
+    color: white;
+  }
+
+  .choice.wrong::before { background: var(--wrong); transform: scaleY(1); }
+
+  .choice.disabled {
+    pointer-events: none;
+    opacity: 0.4;
+  }
+
+  .feedback {
+    margin-top: 20px;
+    padding: 14px 18px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border-left: 3px solid transparent;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: all 0.25s;
+    display: none;
+  }
+
+  .feedback.show {
+    opacity: 1;
+    transform: translateY(0);
+    display: block;
+  }
+
+  .feedback.good {
+    border-color: var(--correct);
+    background: rgba(0, 200, 100, 0.06);
+    color: var(--correct);
+  }
+
+  .feedback.bad {
+    border-color: var(--wrong);
+    background: rgba(255, 26, 26, 0.06);
+    color: #ff6666;
+  }
+
+  .btn-next {
+    margin-top: 20px;
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 14px 36px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    cursor: pointer;
+    display: block;
+    margin-left: auto;
+    transition: border-color 0.15s, color 0.15s, transform 0.1s;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .btn-next.visible {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .btn-next:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    transform: translateX(4px);
+  }
+
+  /* ===== RESULT ===== */
+  #screen-result {
+    display: none;
+    text-align: center;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .result-emoji {
+    font-size: 4rem;
+    display: block;
+    margin-bottom: 20px;
+  }
+
+  .result-eyebrow {
+    font-size: 0.75rem;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--text-soft);
+    margin-bottom: 8px;
+  }
+
+  .result-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(3rem, 10vw, 5.5rem);
+    line-height: 1;
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+  }
+
+  .result-score {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(4rem, 15vw, 8rem);
+    line-height: 1;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 10px 0 20px;
+  }
+
+  .result-msg {
+    color: var(--text-soft);
+    font-size: 1rem;
+    font-weight: 300;
+    margin-bottom: 40px;
+    line-height: 1.6;
+  }
+
+  .btn-restart {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 14px 40px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .btn-restart:hover {
+    background: var(--accent);
+    color: white;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .q-anim {
+    animation: fadeUp 0.35s ease both;
+  }
+
+  /* Divider */
+  .divider {
+    width: 40px;
+    height: 3px;
+    background: var(--accent);
+    margin: 0 auto 24px;
+  }
+
+  @media (max-width: 480px) {
+    .app { padding: 20px 16px; }
+    .choice { padding: 14px 16px; font-size: 0.9rem; }
+  }
+</style>
+</head>
+<body>
+
+<div id="flash-overlay"></div>
+
+<div class="app">
+
+  <!-- INTRO -->
+  <div id="screen-intro">
+    <span class="intro-emoji">👑</span>
+    <p class="intro-eyebrow">The ultimate test</p>
+    <h1 class="intro-title">Do you really<br>know <span>Titou?</span></h1>
+    <div class="divider"></div>
+    <p class="intro-sub">
+      <strong>25 questions</strong> picked randomly from 100.<br>
+      Every game is different. Think you know him?
+    </p>
+    <button class="btn-start" onclick="startQuiz()">LET'S GO →</button>
+  </div>
+
+  <!-- QUESTION -->
+  <div id="screen-question">
+    <div class="top-bar">
+      <div class="progress-wrap">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+      <div class="q-counter" id="q-counter">01 / 25</div>
+      <div class="score-pill">⚡ <span id="score-display">0</span></div>
+    </div>
+    <div class="q-anim" id="q-wrap">
+      <span class="q-emoji" id="q-emoji">🤔</span>
+      <div class="q-text" id="q-text"></div>
+      <div class="choices" id="choices"></div>
+      <div class="feedback" id="feedback"></div>
+      <button class="btn-next" id="btn-next" onclick="nextQuestion()">NEXT →</button>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div id="screen-result">
+    <span class="result-emoji" id="result-emoji">🏆</span>
+    <p class="result-eyebrow">Your score</p>
+    <div class="result-score" id="result-score"></div>
+    <h2 class="result-title" id="result-title"></h2>
+    <div class="divider"></div>
+    <p class="result-msg" id="result-msg"></p>
+    <button class="btn-restart" onclick="startQuiz()">PLAY AGAIN →</button>
+  </div>
+
+</div>
+
+<script>
+const ALL_QUESTIONS = [
+  { q: "What is Titou's full name?", A: "Titou Alexandre Granier", B: "Titou Esteban Olivier Granier", C: "Titou Gabriel Granier", D: "Titou Esteban Lucas Granier", ans: "B", emoji: "📛" },
+  { q: "Where was he born?", A: "Lausanne", B: "Paris", C: "Meyrin, Geneva", D: "Lyon", ans: "C", emoji: "🌍" },
+  { q: "What is his birthday?", A: "April 21, 2000", B: "May 31, 2000", C: "June 11, 1999", D: "May 30, 2000", ans: "B", emoji: "🎂" },
+  { q: "What does he prefer?", A: "Salty", B: "Spicy", C: "Sweet", D: "Bitter", ans: "C", emoji: "😋" },
+  { q: "Which drink does he prefer?", A: "Coffee", B: "Tea", C: "Hot chocolate", D: "Matcha", ans: "B", emoji: "☕" },
+  { q: "What is his favorite dish?", A: "Pizza", B: "Sushi", C: "Pasta pesto rosso Barilla", D: "Lasagna", ans: "C", emoji: "🍝" },
+  { q: "What is his party drink?", A: "Vodka Red Bull", B: "Beer", C: "Gin and tonic", D: "Rum and Coke", ans: "D", emoji: "🥃" },
+  { q: "What is his favorite fast food?", A: "McDonald's", B: "KFC", C: "Five Guys", D: "Burger King", ans: "D", emoji: "🍔" },
+  { q: "What is his favorite ice cream flavor?", A: "Chocolate", B: "Strawberry", C: "Vanilla", D: "Pistachio", ans: "C", emoji: "🍦" },
+  { q: "Does he cook?", A: "Yes", B: "No", C: "Sometimes", D: "Rarely", ans: "A", emoji: "👨‍🍳" },
+  { q: "What is his signature dish?", A: "Risotto", B: "Pasta pesto", C: "Pizza", D: "Tacos", ans: "B", emoji: "🍳" },
+  { q: "What is his favorite color?", A: "Red", B: "Blue", C: "Orange", D: "Black", ans: "C", emoji: "🎨" },
+  { q: "Which country does he dream of living in?", A: "Thailand", B: "Spain", C: "Bahamas", D: "Australia", ans: "C", emoji: "🏝️" },
+  { q: "How many tattoos does he have?", A: "2", B: "3", C: "5", D: "8", ans: "C", emoji: "🪡" },
+  { q: "Is he a morning or night person?", A: "Night", B: "Evening", C: "Morning", D: "Both", ans: "C", emoji: "🌅" },
+  { q: "What is his favorite animal?", A: "Dog", B: "Cat", C: "Horse", D: "Tiger", ans: "B", emoji: "🐾" },
+  { q: "Is he introverted or extroverted?", A: "Introverted", B: "Extroverted", C: "Ambivert", D: "Depends", ans: "B", emoji: "🎭" },
+  { q: "Has he ever had a serious accident?", A: "Yes", B: "No", C: "Once", D: "Many times", ans: "A", emoji: "🚑" },
+  { q: "Does he snore?", A: "Yes", B: "No", C: "Sometimes", D: "Rarely", ans: "A", emoji: "😴" },
+  { q: "Does he sometimes talk to himself?", A: "Yes", B: "No", C: "Only when stressed", D: "Rarely", ans: "A", emoji: "🗣️" },
+  { q: "What is his clothing style called?", A: "Streetwear", B: "Minimalist", C: "Titou fashion", D: "Classic", ans: "C", emoji: "👔" },
+  { q: "Who is his favorite music artist?", A: "Drake", B: "Kanye West", C: "He doesn't have one", D: "Travis Scott", ans: "C", emoji: "🎵" },
+  { q: "What is his comfort movie?", A: "Interstellar", B: "Gerry", C: "Inception", D: "Titanic", ans: "B", emoji: "🎬" },
+  { q: "Which series did he binge-watch?", A: "Breaking Bad", B: "Dark", C: "Maniac", D: "Lost", ans: "C", emoji: "📺" },
+  { q: "Does he prefer summer or winter?", A: "Summer", B: "Winter", C: "No preference", D: "Spring", ans: "C", emoji: "🌤️" },
+  { q: "Does he prefer city or countryside?", A: "Countryside", B: "City", C: "Both", D: "Mountains", ans: "B", emoji: "🌆" },
+  { q: "What is his dream vacation destination?", A: "Mexico", B: "Panama", C: "Brazil", D: "Bali", ans: "B", emoji: "✈️" },
+  { q: "Which sport does he hate?", A: "Football", B: "Tennis", C: "Swimming", D: "Basketball", ans: "C", emoji: "🏊" },
+  { q: "Which creative activity does he practice?", A: "Painting", B: "Boxing", C: "Music", D: "Photography", ans: "B", emoji: "🥊" },
+  { q: "Which video game does he love?", A: "Fortnite", B: "Minecraft", C: "Call of Duty", D: "GTA 5", ans: "D", emoji: "🎮" },
+  { q: "What is his biggest addiction?", A: "Video games", B: "Sports", C: "Alcohol", D: "Sugar", ans: "D", emoji: "🍬" },
+  { q: "Does he have a driver's license?", A: "Yes", B: "No", C: "In progress", D: "He lost it", ans: "A", emoji: "🚗" },
+  { q: "What is his favorite social network?", A: "TikTok", B: "Snapchat", C: "Instagram", D: "Twitter", ans: "C", emoji: "📱" },
+  { q: "Which artistic project is he most proud of?", A: "A movie", B: "His book", C: "A painting", D: "A song", ans: "B", emoji: "📚" },
+  { q: "Does he like dancing?", A: "Yes", B: "No", C: "Sometimes", D: "Rarely", ans: "A", emoji: "💃" },
+  { q: "Does he often cry during movies?", A: "Yes", B: "No", C: "Sometimes", D: "Only romantic movies", ans: "B", emoji: "😭" },
+  { q: "Has he ever taken a solo trip?", A: "Yes", B: "No", C: "Once", D: "Many times", ans: "B", emoji: "🧳" },
+  { q: "Does he keep a journal?", A: "Yes", B: "No", C: "Sometimes", D: "Used to", ans: "B", emoji: "📓" },
+  { q: "Does he believe in astrology?", A: "Yes", B: "No", C: "Sometimes", D: "Only horoscopes", ans: "B", emoji: "⭐" },
+  { q: "If he were someone else, who would he be?", A: "A king", B: "A billionaire", C: "God of the God", D: "A philosopher", ans: "C", emoji: "👑" },
+  { q: "What instantly makes him angry?", A: "Lies", B: "Disrespect", C: "When someone says he isn't 'God of the God'", D: "Noise", ans: "C", emoji: "😤" },
+  { q: "Which sound does he hate?", A: "Alarm clocks", B: "Loud music", C: "Ultrasounds / very high-pitched sounds", D: "Traffic", ans: "C", emoji: "🔊" },
+  { q: "What is his recurring nightmare?", A: "Falling from a building", B: "Being chased but never caught", C: "Losing his phone", D: "Being lost", ans: "B", emoji: "😨" },
+  { q: "What does he do when he is sad?", A: "Goes for a walk", B: "Calls a friend", C: "Curls up and waits", D: "Sleeps", ans: "C", emoji: "😔" },
+  { q: "Does he forgive easily?", A: "Yes", B: "No", C: "Sometimes", D: "Rarely", ans: "A", emoji: "🤝" },
+  { q: "What does he hate in people?", A: "Arrogance", B: "Selfishness", C: "Laziness", D: "Dishonesty", ans: "B", emoji: "🙄" },
+  { q: "What is his biggest insecurity?", A: "His height", B: "His voice", C: "His tongue", D: "His hands", ans: "C", emoji: "🫢" },
+  { q: "How many sexual partners has he had?", A: "3", B: "5", C: "7", D: "10", ans: "C", emoji: "🔥" },
+  { q: "Has he ever ghosted someone?", A: "Yes", B: "No", C: "Once", D: "Many times", ans: "A", emoji: "👻" },
+  { q: "What does he do when he is in love?", A: "Writes poems", B: "Travels with the person", C: "Spends time with the person", D: "Buys gifts", ans: "C", emoji: "❤️" },
+  { q: "What is his love language?", A: "Words", B: "Gifts", C: "Sex", D: "Quality time", ans: "C", emoji: "💞" },
+  { q: "Is he romantic?", A: "Yes, very", B: "No", C: "Sometimes", D: "Rarely", ans: "A", emoji: "🌹" },
+  { q: "What makes him vulnerable?", A: "Family", B: "Friends", C: "Anagha", D: "Work", ans: "C", emoji: "💔" },
+  { q: "Is he possessive?", A: "Yes", B: "No", C: "Sometimes", D: "Rarely", ans: "B", emoji: "🔒" },
+  { q: "Does he get offended easily?", A: "Yes", B: "No", C: "Sometimes", D: "Often", ans: "B", emoji: "🫤" },
+  { q: "What does he never say out loud?", A: "His fears", B: "His secrets", C: "That he likes big girls", D: "His dreams", ans: "C", emoji: "🤫" },
+  { q: "What does he hope people understand without saying it?", A: "That he is sensitive", B: "That he likes big girls", C: "That he is tired", D: "That he is busy", ans: "B", emoji: "💭" },
+  { q: "Which compliment touches him the most?", A: "That he is smart", B: "That he is funny", C: "That he is 'God of the God'", D: "That he is kind", ans: "C", emoji: "🙏" },
+  { q: "Does he believe in destiny?", A: "Yes", B: "No", C: "Sometimes", D: "Rarely", ans: "A", emoji: "🌌" },
+  { q: "Has he ever had his heart broken?", A: "Yes", B: "No", C: "Once", D: "Many times", ans: "A", emoji: "💔" },
+  { q: "Does he believe in love forever?", A: "Yes", B: "No", C: "Sometimes", D: "Maybe", ans: "A", emoji: "♾️" },
+  { q: "Who marked his life the most?", A: "Sarah", B: "Emma", C: "Anagha", D: "Julia", ans: "C", emoji: "⭐" },
+  { q: "Is he afraid of getting old?", A: "Yes", B: "No", C: "Sometimes", D: "Rarely", ans: "B", emoji: "👴" },
+  { q: "Does he want children?", A: "Yes", B: "No", C: "Maybe", D: "Not sure", ans: "A", emoji: "👶" },
+  { q: "What does he think about before sleeping?", A: "Money", B: "His future", C: "Anagha", D: "Work", ans: "C", emoji: "🌙" },
+  { q: "What motivates him to wake up?", A: "Sports", B: "Friends", C: "Anagha and money", D: "Travel", ans: "C", emoji: "☀️" },
+  { q: "What is his biggest hidden fear?", A: "Losing money", B: "Losing Anagha", C: "Losing fame", D: "Losing friends", ans: "B", emoji: "😰" },
+  { q: "When was he most proud of himself?", A: "Winning a competition", B: "Writing his book", C: "Finishing school", D: "Starting a business", ans: "B", emoji: "🏆" },
+  { q: "When did he feel the most alone?", A: "During a trip", B: "During school", C: "When Anagha went to the bathroom", D: "During lockdown", ans: "C", emoji: "🥲" },
+  { q: "Has he ever wanted to stop everything?", A: "Yes", B: "No", C: "Once", D: "Many times", ans: "A", emoji: "😮‍💨" },
+  { q: "Is he religious?", A: "Yes, he believes strongly in prayer", B: "No", C: "Sometimes", D: "Only culturally", ans: "A", emoji: "🙏" },
+  { q: "What strange ritual does he have?", A: "Talking to mirrors", B: "Picking his nose in the shower", C: "Singing alone", D: "Walking at night", ans: "B", emoji: "🚿" },
+  { q: "Does he feel loved?", A: "Yes", B: "No", C: "Sometimes", D: "Rarely", ans: "A", emoji: "🥰" },
+  { q: "Does he think people understand him?", A: "Yes, Anagha does", B: "No", C: "Sometimes", D: "Rarely", ans: "A", emoji: "🧠" },
+  { q: "Has he ever betrayed someone?", A: "Yes", B: "No", C: "Once", D: "Many times", ans: "B", emoji: "🗡️" },
+  { q: "Has he ever been betrayed?", A: "Yes", B: "No", C: "Once", D: "Many times", ans: "A", emoji: "🥀" },
+  { q: "Which song makes him cry?", A: "Imagine", B: "Les mots bleus", C: "Hallelujah", D: "Yesterday", ans: "B", emoji: "🎶" },
+  { q: "Has he ever deeply regretted something?", A: "Yes", B: "No", C: "Once", D: "Many times", ans: "A", emoji: "😞" },
+  { q: "Does he forgive his own mistakes?", A: "Completely", B: "Moderately", C: "Never", D: "Always", ans: "B", emoji: "🪞" },
+  { q: "Does he believe people can truly change?", A: "Yes", B: "No", C: "Sometimes", D: "Rarely", ans: "B", emoji: "🔄" },
+  { q: "Does he have a mission in life?", A: "Yes, become rich and have a family", B: "Yes, travel the world", C: "Yes, become famous", D: "No", ans: "A", emoji: "🎯" },
+  { q: "Does he believe art can save people?", A: "Yes", B: "No", C: "Sometimes", D: "Rarely", ans: "A", emoji: "🖼️" },
+  { q: "Would he rather be loved or understood?", A: "Loved", B: "Understood", C: "Both", D: "Neither", ans: "A", emoji: "💡" },
+  { q: "Has he ever felt in the right place in life?", A: "Yes", B: "No", C: "Sometimes", D: "Rarely", ans: "A", emoji: "✅" },
+  { q: "What is a beautiful life for him?", A: "Fame and power", B: "Traveling forever", C: "Living in the sun with his children without worries", D: "Becoming famous", ans: "C", emoji: "🌞" },
+  { q: "What does he want people to think about him?", A: "A genius", B: "A kind man", C: "A handsome man who looks like God", D: "A leader", ans: "C", emoji: "😎" },
+  { q: "Does he believe in multiple lives?", A: "Yes", B: "No", C: "Maybe", D: "Sometimes", ans: "A", emoji: "🔮" },
+  { q: "Does he think suffering makes people more human?", A: "Yes", B: "No", C: "Sometimes", D: "Rarely", ans: "A", emoji: "🌊" },
+  { q: "If he disappeared tomorrow, what would he leave?", A: "A book", B: "His testament", C: "A company", D: "Nothing", ans: "B", emoji: "📜" },
+  { q: "Does he think he is hard to love?", A: "Yes", B: "No", C: "Sometimes", D: "Rarely", ans: "B", emoji: "💝" },
+  { q: "Does he have a hidden version of himself nobody knows?", A: "Yes", B: "No", C: "Maybe", D: "Sometimes", ans: "B", emoji: "🎭" },
+  { q: "What is his biggest contradiction?", A: "Loving money", B: "Loving big girls", C: "Loving fame", D: "Loving solitude", ans: "B", emoji: "⚡" },
+  { q: "What has he never told anyone?", A: "His dreams", B: "His fears", C: "That he likes big girls", D: "His secrets", ans: "C", emoji: "🔐" },
+  { q: "If he made an ultimate artwork, what would it be?", A: "A movie", B: "A painting", C: "An opera", D: "A novel", ans: "C", emoji: "🎭" },
+  { q: "Does he think he will mark history?", A: "Yes", B: "No", C: "Maybe", D: "Not sure", ans: "A", emoji: "🏛️" },
+  { q: "Does he think he deserves everything he lives?", A: "Yes", B: "No", C: "Sometimes", D: "Rarely", ans: "A", emoji: "⚖️" },
+  { q: "Has he ever seen God somewhere?", A: "Yes", B: "No", C: "In dreams", D: "He says he is God", ans: "D", emoji: "✨" },
+  { q: "Is he happy now?", A: "Yes", B: "No", C: "Sometimes", D: "Rarely", ans: "A", emoji: "😊" },
+  { q: "What has he not dared to do yet?", A: "Move abroad", B: "Start a company", C: "Propose to Anagha", D: "Write another book", ans: "C", emoji: "💍" },
+  { q: "What would he like people to say after his death?", A: "That he was great", B: "That he was kind", C: "Nothing, he wants to be forgotten", D: "That he was famous", ans: "C", emoji: "🕯️" }
+];
+
+const TOTAL = 25;
+let questions = [];
+let current = 0;
+let score = 0;
+let answered = false;
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function startQuiz() {
+  questions = shuffle(ALL_QUESTIONS).slice(0, TOTAL);
+  current = 0;
+  score = 0;
+  hide('screen-intro');
+  hide('screen-result');
+  show('screen-question');
+  renderQuestion();
+}
+
+function renderQuestion() {
+  answered = false;
+  const q = questions[current];
+
+  document.getElementById('q-counter').textContent =
+    String(current + 1).padStart(2, '0') + ' / ' + String(TOTAL).padStart(2, '0');
+  document.getElementById('score-display').textContent = score;
+  document.getElementById('progress-fill').style.width = (current / TOTAL * 100) + '%';
+  document.getElementById('q-emoji').textContent = q.emoji;
+  document.getElementById('q-text').textContent = q.q;
+
+  const fb = document.getElementById('feedback');
+  fb.className = 'feedback';
+  fb.textContent = '';
+
+  const btn = document.getElementById('btn-next');
+  btn.className = 'btn-next';
+  btn.textContent = current < TOTAL - 1 ? 'NEXT →' : 'SEE RESULTS →';
+
+  const choicesEl = document.getElementById('choices');
+  choicesEl.innerHTML = '';
+  ['A','B','C','D'].forEach(letter => {
+    const text = q[letter];
+    if (!text) return;
+    const b = document.createElement('button');
+    b.className = 'choice';
+    b.innerHTML = `<span class="choice-letter">${letter}</span><span>${text}</span>`;
+    b.onclick = () => selectAnswer(letter);
+    choicesEl.appendChild(b);
+  });
+
+  const wrap = document.getElementById('q-wrap');
+  wrap.style.animation = 'none';
+  wrap.offsetHeight;
+  wrap.style.animation = 'fadeUp 0.35s ease both';
+}
+
+function triggerFlash() {
+  const overlay = document.getElementById('flash-overlay');
+  overlay.classList.remove('flash');
+  overlay.offsetHeight;
+  overlay.classList.add('flash');
+}
+
+function selectAnswer(letter) {
+  if (answered) return;
+  answered = true;
+
+  const correct = questions[current].ans;
+  document.querySelectorAll('.choice').forEach(btn => {
+    const l = btn.querySelector('.choice-letter').textContent;
+    if (l === correct) btn.classList.add('correct');
+    else if (l === letter && letter !== correct) btn.classList.add('wrong');
+    else btn.classList.add('disabled');
+  });
+
+  const fb = document.getElementById('feedback');
+
+  if (letter === correct) {
+    score++;
+    document.getElementById('score-display').textContent = score;
+    fb.textContent = '✓ Correct!';
+    fb.className = 'feedback good show';
+  } else {
+    triggerFlash();
+    fb.textContent = `✗ Wrong — it was ${correct}: ${questions[current][correct]}`;
+    fb.className = 'feedback bad show';
+  }
+
+  document.getElementById('btn-next').className = 'btn-next visible';
+}
+
+function nextQuestion() {
+  current++;
+  if (current < TOTAL) {
+    renderQuestion();
+  } else {
+    showResult();
+  }
+}
+
+function showResult() {
+  hide('screen-question');
+  show('screen-result');
+
+  document.getElementById('progress-fill').style.width = '100%';
+  const pct = score / TOTAL;
+
+  let emoji, title, msg;
+  if (pct === 1)       { emoji = '👑'; title = 'PERFECT.';        msg = 'You are basically Titou at this point.'; }
+  else if (pct >= 0.8) { emoji = '🔥'; title = 'VERY GOOD.';      msg = 'You really know your guy.'; }
+  else if (pct >= 0.6) { emoji = '⚡'; title = 'NOT BAD.';         msg = 'Some things you clearly missed.'; }
+  else if (pct >= 0.4) { emoji = '😬'; title = 'AVERAGE.';         msg = 'You know him, but not that well.'; }
+  else                 { emoji = '💀'; title = 'WHO IS TITOU?';    msg = 'You might want to spend more time with him.'; }
+
+  document.getElementById('result-emoji').textContent = emoji;
+  document.getElementById('result-title').textContent = title;
+  document.getElementById('result-score').textContent = score + ' / ' + TOTAL;
+  document.getElementById('result-msg').textContent = msg;
+}
+
+function show(id) { document.getElementById(id).style.display = 'block'; }
+function hide(id) { document.getElementById(id).style.display = 'none'; }
+</script>
+</body>
+</html>
